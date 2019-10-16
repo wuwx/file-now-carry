@@ -11,6 +11,15 @@ class SocketServer extends Server
         parent::__construct($host, $port);
     }
 
+
+    public function onConnection($callback)
+    {
+        if ($callback instanceof \Closure) {
+
+            $this->on('connection', $callback);
+        }
+    }
+
     public function onOpen($callback)
     {
         if ($callback instanceof \Closure) {

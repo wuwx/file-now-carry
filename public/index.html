@@ -6,5 +6,71 @@
 </head>
 <body>
 
+    <script>
+        let MessageTypeEnum = {
+            COMMON: 1,
+            CLOSE: 0
+        };
+
+        let ws = new WebSocket('ws://127.0.0.1:9999')
+        ws.onopen = function() {
+            // Web Socket 已连接上，使用 send() 方法发送数据
+            ws.send(new Protocol(MessageTypeEnum.COMMON, '连接成功').toJson());
+        };
+
+
+        ws.onclose = function(e)
+        {
+            // 关闭 websocket
+            let protocol = new Protocol().parse(e.reason);
+
+            alert("连接已关闭..., 原因是：" + protocol.msg);
+        };
+
+        ws.onmessage = function (evt)
+        {
+            var received_msg = evt.data;
+            alert("数据已接收...");
+        };
+
+
+        function Protocol(type, msg, data)
+        {
+            this.type = type;
+            this.msg = msg;
+            this.data = data;
+
+
+            this.parse = function (text) {
+
+                try {
+
+                    let json = JSON.parse(text);
+                    this.type = json.type;
+                    this.msg = json.msg;
+                    this.data = json.data;
+
+                } catch (e) {
+
+                    this.type = MessageTypeEnum.COMMON;
+                    this.msg = '';
+                    this.data = {};
+                }
+
+                return this;
+            };
+
+            this.toJson = function () {
+
+                let json = {
+                    type: this.type,
+                    msg: this.msg,
+                    data: this.data
+                };
+
+                return JSON.stringify(json);
+            }
+        }
+    </script>
 </body>
 </html>
