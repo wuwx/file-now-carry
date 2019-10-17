@@ -6,6 +6,63 @@
 </head>
 <body>
 
+    <input type="file" id="inputFile">
+    <button id="linkBtn">建立连接</button>
+
+    <script>
+
+        let inputFile = document.getElementById('inputFile');
+        let linkBtn = document.getElementById('linkBtn');
+        linkBtn.onclick = function () {
+
+            let selectFile = inputFile.files[0];
+            if (selectFile === undefined) {
+
+                alert('你还没有选择文件');
+                return;
+            }
+
+            let manager = new FileManager(selectFile);
+            manager.readChunkContents();
+        };
+
+        function FileManager(file)
+        {
+            let that = this;
+            this.file = file;
+            this.fileReader = new FileReader();
+            this.chunkSize = 10;
+            this.chunkIndex = 0;
+            this.chunkPages = Math.ceil(this.file.size / this.chunkSize);
+
+            this.fileReader.onload = function(e) {
+
+                console.log("读取文件", that.chunkIndex + 1, "/", that.chunkPages);
+                ++ that.chunkIndex;
+
+                //如果文件处理完成计算MD5，如果还有分片继续处理
+                if (that.chunkIndex < that.chunkPages) {
+
+                    console.log(this.result);
+                    that.readChunkContents();
+                } else {
+
+                    console.log("finished loading");
+                }
+            };
+
+            this.readChunkContents = function () {
+
+                let blobSlice = File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice;
+                let start = this.chunkIndex * this.chunkSize;
+                let end = start + this.chunkSize;
+
+                this.fileReader.readAsBinaryString(blobSlice.call(file, start, end));
+            };
+        }
+
+
+    </script>
     <script>
         let MessageTypeEnum = {
             COMMON: 1,
