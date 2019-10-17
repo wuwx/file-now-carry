@@ -22,112 +22,121 @@
                 return;
             }
 
-            let manager = new FileManager(selectFile);
-            manager.readChunkContents();
+            new Application(selectFile).readChunkContents();
         };
 
-        function FileManager(file)
+        function Application(file, ws)
         {
             let that = this;
             this.file = file;
-            this.fileReader = new FileReader();
+            this.ws = new WebSocket('ws://127.0.0.1:9999');
+            this.wsActive = false;
             this.chunkSize = 10;
             this.chunkIndex = 0;
             this.chunkPages = Math.ceil(this.file.size / this.chunkSize);
 
-            this.fileReader.onload = function(e) {
-
-                console.log("读取文件", that.chunkIndex + 1, "/", that.chunkPages);
-                ++ that.chunkIndex;
-
-                //如果文件处理完成计算MD5，如果还有分片继续处理
-                if (that.chunkIndex < that.chunkPages) {
-
-                    console.log(this.result);
-                    that.readChunkContents();
-                } else {
-
-                    console.log("finished loading");
-                }
+            Application.MessageTypeEnum = {
+                COMMON: 1,
+                FILE_PRE_UPLOAD: 1,
+                FILE_UPLOADING: 2,
+                FILE_UPLOADED: 3,
+                CLOSE: 0
             };
 
-            this.readChunkContents = function () {
+            this.ws.onopen = function() {
+                // Web Socket 已连接上，使用 send() 方法发送数据
+                that.wsActive = true;
+            };
+            this.ws.onmessage(function(event) {
+                // 处理数据
+                let data = event.data;
+                let msg = that.newProtocol().parse(data);
+
+                switch (msg.type) {
+
+                    case Application.FILE_PRE_UPLOAD:
+                        // 上传之前，把文件大小，切片端告诉后端
+                        break;
+                    case Application.FILE_UPLOADING:
+
+                        // 让后端告诉我要取第几块的数据，前端只负责读取
+                        let Blob = that.readChunkContents(msg.data.index);
+                        ws.send(Blob);
+                        break;
+                    case Application.FILE_UPLOADED:
+                        // 传输完成，代表对方接受完成
+                        break;
+
+                }
+
+            });
+
+            this.readChunkContents = function (chunkIndex) {
+
+                if (! this.wsActive) {
+                    alert('ws 未建立成功');
+                    return;
+                }
 
                 let blobSlice = File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice;
-                let start = this.chunkIndex * this.chunkSize;
+                let start = chunkIndex * this.chunkSize;
                 let end = start + this.chunkSize;
 
-                this.fileReader.readAsBinaryString(blobSlice.call(file, start, end));
-            };
-        }
-
-
-    </script>
-    <script>
-        let MessageTypeEnum = {
-            COMMON: 1,
-            CLOSE: 0
-        };
-
-        let ws = new WebSocket('ws://127.0.0.1:9999')
-        ws.onopen = function() {
-            // Web Socket 已连接上，使用 send() 方法发送数据
-            ws.send(new Protocol(MessageTypeEnum.COMMON, '连接成功').toJson());
-        };
-
-
-        ws.onclose = function(e)
-        {
-            // 关闭 websocket
-            let protocol = new Protocol().parse(e.reason);
-
-            alert("连接已关闭..., 原因是：" + protocol.msg);
-        };
-
-        ws.onmessage = function (evt)
-        {
-            var received_msg = evt.data;
-            alert("数据已接收...");
-        };
-
-
-        function Protocol(type, msg, data)
-        {
-            this.type = type;
-            this.msg = msg;
-            this.data = data;
-
-
-            this.parse = function (text) {
-
-                try {
-
-                    let json = JSON.parse(text);
-                    this.type = json.type;
-                    this.msg = json.msg;
-                    this.data = json.data;
-
-                } catch (e) {
-
-                    this.type = MessageTypeEnum.COMMON;
-                    this.msg = '';
-                    this.data = {};
-                }
-
-                return this;
+                return blobSlice.call(file, start, end);
             };
 
-            this.toJson = function () {
-
-                let json = {
-                    type: this.type,
-                    msg: this.msg,
-                    data: this.data
+            /**
+             * 通信协议类
+             * @param type
+             * @param msg
+             * @param data
+             * @constructor
+             */
+            this.newProtocol = function (type, msg, data)
+            {
+                let obj = {
+                    type: type,
+                    msg: msg,
+                    data: data
                 };
 
-                return JSON.stringify(json);
+                obj.parse = function (text) {
+
+                    try {
+
+                        let json = JSON.parse(text);
+                        this.type = json.type;
+                        this.msg = json.msg;
+                        this.data = json.data;
+
+                    } catch (e) {
+
+                        this.type = MessageTypeEnum.COMMON;
+                        this.msg = '';
+                        this.data = {};
+                    }
+
+                    return this;
+                };
+
+                obj.toJson = function () {
+
+                    let json = {
+                        type: this.type,
+                        msg: this.msg,
+                        data: this.data
+                    };
+
+                    return JSON.stringify(json);
+                }
+
+                return obj;
             }
         }
+
+
+
+
     </script>
 </body>
 </html>
