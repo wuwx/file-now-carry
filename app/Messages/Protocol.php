@@ -29,10 +29,21 @@ class Protocol
     }
 
 
-    public static function newInstanceToJson($type = null, $msg = null, $data = null)
+
+
+    public function getType()
     {
-        $object = new self($type, $msg, $data);
-        return $object->toJson();
+        return $this->type;
+    }
+
+    public function getMessage()
+    {
+        return $this->msg;
+    }
+
+    public function getData()
+    {
+        return $this->data;
     }
 
     public function toJson()
@@ -44,5 +55,11 @@ class Protocol
         ];
 
         return json_encode($json, JSON_UNESCAPED_UNICODE);
+    }
+
+    public static function newInstanceToJson($type = null, $msg = null, $data = null)
+    {
+        $object = new self($type, $msg, $data);
+        return $object->toJson();
     }
 }

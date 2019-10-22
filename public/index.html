@@ -7,136 +7,151 @@
 <body>
 
     <input type="file" id="inputFile">
-    <button id="linkBtn">建立连接</button>
+    <button id="linkBtn">生成连接</button>
 
     <script>
 
-        let inputFile = document.getElementById('inputFile');
-        let linkBtn = document.getElementById('linkBtn');
-        linkBtn.onclick = function () {
 
-            let selectFile = inputFile.files[0];
-            if (selectFile === undefined) {
+        let ws = new WebSocket('ws://127.0.0.1:9999');
+        ws.onopen = function () {
 
-                alert('你还没有选择文件');
-                return;
-            }
+            let app = new Application(ws);
+            let inputFile = document.getElementById('inputFile');
+            let linkBtn = document.getElementById('linkBtn');
 
-            new Application(selectFile).readChunkContents();
-        };
-
-        function Application(file, ws)
-        {
-            let that = this;
-            this.file = file;
-            this.ws = new WebSocket('ws://127.0.0.1:9999');
-            this.wsActive = false;
-            this.chunkSize = 10;
-            this.chunkIndex = 0;
-            this.chunkPages = Math.ceil(this.file.size / this.chunkSize);
-
-            Application.MessageTypeEnum = {
-                COMMON: 1,
-                FILE_PRE_UPLOAD: 1,
-                FILE_UPLOADING: 2,
-                FILE_UPLOADED: 3,
-                CLOSE: 0
+            inputFile.onchange = function () {
+                let selectFile = inputFile.files[0];
+                app.setFile(selectFile);
             };
+            linkBtn.onclick = function () {
 
-            this.ws.onopen = function() {
-                // Web Socket 已连接上，使用 send() 方法发送数据
-                that.wsActive = true;
-            };
-            this.ws.onmessage(function(event) {
-                // 处理数据
-                let data = event.data;
-                let msg = that.newProtocol().parse(data);
 
-                switch (msg.type) {
+                if (! app.file) {
 
-                    case Application.FILE_PRE_UPLOAD:
-                        // 上传之前，把文件大小，切片端告诉后端
-                        break;
-                    case Application.FILE_UPLOADING:
-
-                        // 让后端告诉我要取第几块的数据，前端只负责读取
-                        let Blob = that.readChunkContents(msg.data.index);
-                        ws.send(Blob);
-                        break;
-                    case Application.FILE_UPLOADED:
-                        // 传输完成，代表对方接受完成
-                        break;
-
-                }
-
-            });
-
-            this.readChunkContents = function (chunkIndex) {
-
-                if (! this.wsActive) {
-                    alert('ws 未建立成功');
+                    alert('你还没有选择文件');
                     return;
                 }
 
-                let blobSlice = File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice;
-                let start = chunkIndex * this.chunkSize;
-                let end = start + this.chunkSize;
-
-                return blobSlice.call(file, start, end);
+                // 开始创建房间
+                app.createRoom();
             };
 
-            /**
-             * 通信协议类
-             * @param type
-             * @param msg
-             * @param data
-             * @constructor
-             */
-            this.newProtocol = function (type, msg, data)
+            function Application(ws)
             {
-                let obj = {
-                    type: type,
-                    msg: msg,
-                    data: data
+                let that = this;
+                this.chunkSize = 10;
+                this.ws = ws;
+                this.file = null;
+
+                Application.MessageTypeEnum = {
+                    COMMON: 1,
+                    FILE_PRE_UPLOAD: 1,
+                    FILE_UPLOADING: 2,
+                    FILE_UPLOADED: 3,
+                    CREATED_ROOM: 4,
+                    CLOSE: 0
                 };
 
-                obj.parse = function (text) {
+                this.ws.onmessage = function(event) {
+                    // 处理数据
+                    let data = event.data;
+                    let msg = that.newProtocol().parse(data);
 
-                    try {
+                    switch (msg.type) {
 
-                        let json = JSON.parse(text);
-                        this.type = json.type;
-                        this.msg = json.msg;
-                        this.data = json.data;
+                        case Application.FILE_PRE_UPLOAD:
+                            // 上传之前，把文件大小，切片端告诉后端
+                            that.ws.send(that.newProtocol(Application.MessageTypeEnum.FILE_PRE_UPLOAD, '传输文件信息', that.file).toJson());
+                            break;
+                        case Application.FILE_UPLOADING:
 
-                    } catch (e) {
+                            // 让后端告诉我要取第几块的数据，前端只负责读取
+                            let Blob = that.readChunkContents(msg.data.index);
+                            that.ws.send(Blob);
+                            break;
+                        case Application.FILE_UPLOADED:
+                            // 传输完成，代表对方接受完成
+                            break;
 
-                        this.type = MessageTypeEnum.COMMON;
-                        this.msg = '';
-                        this.data = {};
                     }
+
+                };
+
+                this.setFile = function (file) {
+                    this.file = file;
 
                     return this;
                 };
 
-                obj.toJson = function () {
+                // 创建房间
+                this.createRoom = function () {
 
-                    let json = {
-                        type: this.type,
-                        msg: this.msg,
-                        data: this.data
+                    this.ws.send(this.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间').toJson())
+                };
+                this.readChunkContents = function (chunkIndex) {
+
+                    if (! this.file) {
+
+                        alert('未选择文件');
+                        return;
+                    }
+
+                    let blobSlice = File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice;
+                    let start = chunkIndex * this.chunkSize;
+                    let end = start + this.chunkSize;
+
+                    return blobSlice.call(this.file, start, end);
+                };
+
+                /**
+                 * 通信协议类
+                 * @param type
+                 * @param msg
+                 * @param data
+                 * @constructor
+                 */
+                this.newProtocol = function (type, msg, data)
+                {
+                    let obj = {
+                        type: type,
+                        msg: msg,
+                        data: data
                     };
 
-                    return JSON.stringify(json);
+                    obj.parse = function (text) {
+
+                        try {
+
+                            let json = JSON.parse(text);
+                            this.type = json.type;
+                            this.msg = json.msg;
+                            this.data = json.data;
+
+                        } catch (e) {
+
+                            this.type = MessageTypeEnum.COMMON;
+                            this.msg = '';
+                            this.data = {};
+                        }
+
+                        return this;
+                    };
+
+                    obj.toJson = function () {
+
+                        let json = {
+                            type: this.type,
+                            msg: this.msg,
+                            data: this.data
+                        };
+
+                        return JSON.stringify(json);
+                    }
+
+                    return obj;
                 }
-
-                return obj;
             }
-        }
-
-
-
-
+        };
     </script>
 </body>
 </html>
