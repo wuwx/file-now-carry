@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Models;
 
 class User extends Model
@@ -11,7 +12,6 @@ class User extends Model
 
     /**
      * @var string
-     * @length 90
      */
     protected $shareLink;
 
@@ -30,6 +30,4 @@ class User extends Model
     {
         return $this->shareLink;
     }
-
-
 }

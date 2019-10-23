@@ -81,11 +81,12 @@
                 this.createRoom = function () {
 
                     let fileObj = {
-                        file_size: this.file.size,
-                        file_name: this.file.name,
-                        file_type: this.file.type
+                        fileSize: this.file.size,
+                        fileName: this.file.name,
+                        fileType: this.file.type
                     };
 
+                    console.log(fileObj);
                     app.ws.send(app.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
                 };
                 this.readChunkContents = function (chunkIndex) {
@@ -105,9 +106,11 @@
             }
         });
 
-        app.setOnClose(function () {
+        app.setOnClose(function (e) {
 
-            alert('服务器关闭连接');
+            let msg = app.newProtocol().parse(e.reason);
+
+            alert(msg.msg || '服务器关闭了连接');
         });
     </script>
 </body>

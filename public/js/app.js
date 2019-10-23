@@ -12,8 +12,10 @@ function Application()
 
 
         ADMIN_EVENT_INIT_DATA: 999,
-        ADMIN_EVENT_ADD_USER: 1000,
+        ADMIN_CLOSE_CONNECT: 1000,
         ADMIN_EVENT_ADD_LINK: 1001,
+        ADMIN_USER_ONLINE: 1002,
+        ADMIN_USER_OFFLINE: 1003,
     };
 
     this.setOnMessage = function (event) {

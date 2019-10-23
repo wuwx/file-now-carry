@@ -6,74 +6,117 @@
 </head>
 <body>
 
-<table id="userTable">
-    <tr>
-        <th>用户ID</th>
-        <th>用户分享的链接</th>
-    </tr>
-</table>
-<table id="fileTable">
-    <tr>
-        <th>用户ID</th>
-        <th>文件名</th>
-        <th>文件类型</th>
-        <th>文件大小</th>
-        <th>连接人数</th>
-    </tr>
+<div id="container">
+    <table id="userTable">
+        <tr>
+            <th>序号</th>
+            <th>用户ID</th>
+            <th>用户分享的链接</th>
+            <th>文件名</th>
+            <th>文件类型</th>
+            <th>文件大小</th>
+            <th>连接人数</th>
+            <th>操作</th>
+        </tr>
 
-</table>
+        <tr v-for="(user, id, index) in users" v-bind:key="user.id">
+            <td>{{ index }}</td>
+            <td>{{ user.id }}</td>
+            <td>{{ user.shareLink }}</td>
+            <td>{{ user.fileName }}</td>
+            <td>{{ user.fileType }}</td>
+            <td>{{ user.fileSize }}</td>
+            <td>{{ user.linksCount }}</td>
+            <td><button v-on:click="closeConnect(user.id)">关闭</button></td>
+        </tr>
+    </table>
+</div>
 
 <script src="js/jquery.min.js"></script>
+<script src="js/vue.js"></script>
 <script src="js/app.js"></script>
 <script>
-    let app = new Application();
 
-    app.setOnOpen(function (event) {
+    let vue = new Vue({
+        el: '#container',
+        data: {
+            app: new Application(),
+            users: {
 
-        console.log('连接成功');
-        // 请求要基础数据
-        app.ws.send(app.newProtocol(Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA, '请求后台数据').toJson());
+            }
+        },
+        methods: {
+            formatObjectKey: function (u) {
+
+                let file = u.file || {};
+
+                return {
+                    id: u.id,
+                    shareLink: u.shareLink,
+                    fileName: file.fileName,
+                    fileSize: file.fileSize,
+                    fileType: file.fileType,
+                    linksCount: file.linksCount
+                };
+            },
+            closeConnect: function (id) {
+
+                this.app.ws.send(this.app.newProtocol(Application.MessageTypeEnum.ADMIN_CLOSE_CONNECT, '', {fd: id}).toJson())
+            }
+        },
+        mounted: function () {
+
+            let that = this;
+            that.app.setOnOpen(function (event) {
+
+                console.log('连接成功');
+                // 请求要基础数据
+                that.app.ws.send(that.app.newProtocol(Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA, '请求后台数据').toJson());
+            });
+
+
+            that.app.setOnMessage(function (event) {
+
+                let msg = that.app.newProtocol().parse(event.data);
+                switch (msg.type) {
+
+                    case Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA:
+
+                        for (let i in msg.data) {
+
+                            let object = that.formatObjectKey(msg.data[i]);
+                            vue.$set(vue.users, object.id, object);
+                        }
+                        break;
+                    case Application.MessageTypeEnum.ADMIN_USER_ONLINE:
+                    case Application.MessageTypeEnum.CREATED_ROOM:
+
+                        let object = that.formatObjectKey(msg.data);
+                        vue.$set(vue.users, object.id, object);
+                        break;
+                    case Application.MessageTypeEnum.ADMIN_USER_OFFLINE:
+
+                        let fd = msg.data.fd;
+                        console.error(fd);
+                        if (fd) {
+                            vue.$delete(vue.users, fd);
+                        }
+                        break;
+                }
+            });
+
+            that.app.setOnClose(function (event) {
+
+                alert('连接失败');
+            })
+        },
     });
 
-    app.setOnMessage(function (event) {
-
-        let msg = app.newProtocol().parse(event.data);
-        switch (msg.type) {
-
-            case Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA:
-                for (let i in msg.data.users) {
-
-                    let user = msg.data.users[i];
-                    $('#userTable').append(buildUserHtml(user));
-                }
-
-                for (let i in msg.data.files) {
-
-                    let user = msg.data.files[i];
-                    $('#userTable').append(buildFileHtml(user));
-                }
-                break;
-            case Application.MessageTypeEnum.ADMIN_EVENT_ADD_USER:
-                break;
-            case Application.MessageTypeEnum.ADMIN_EVENT_ADD_LINK:
-                break;
-        }
-    });
-
-    app.setOnClose(function (event) {
-
-        alert('连接失败');
-    })
 
 
-    function buildUserHtml(user)
-    {
-        return '<tr><td>'+ user.id +'</td><td>'+ user.shareLink +'</td></tr>'
-    }
-    function buildFileHtml(file)
-    {
-        return '<tr><td>'+ file.userId +'</td><td>'+ file.fileNmae +'</td><td>'+ file.fileTpye +'</td><td>'+ file.fileSize +'</td><td>'+ file.linksCount +'</td></tr>'
-    }
+
+
+
 </script>
 </body>
 </html>

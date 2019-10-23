@@ -7,29 +7,29 @@ class UserHasFile extends Model
     /**
      * @var int
      */
-    private $userId;
+    protected $userId;
 
     /**
      * @var string
      * @length 100
      */
-    private $fileName;
+    protected $fileName;
 
     /**
      * @var string
      * @length 50
      */
-    private $fileType;
+    protected $fileType;
 
     /**
      * @var integer
      */
-    private $fileSize;
+    protected $fileSize;
 
     /**
      * @var int
      */
-    private $linksCount = 0;
+    protected $linksCount = 0;
 
     /**
      * @return int
@@ -38,7 +38,6 @@ class UserHasFile extends Model
     {
         return $this->userId;
     }
-
 
     /**
      * @return string
