@@ -3,38 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin</title>
+    <link rel="stylesheet" href="layui/css/layui.css">
 </head>
 <body>
 
 <div id="container">
-    <table id="userTable">
-        <tr>
-            <th>序号</th>
-            <th>用户ID</th>
-            <th>用户分享的链接</th>
-            <th>文件名</th>
-            <th>文件类型</th>
-            <th>文件大小</th>
-            <th>连接人数</th>
-            <th>操作</th>
-        </tr>
 
-        <tr v-for="(user, id, index) in users" v-bind:key="user.id">
-            <td>{{ index }}</td>
-            <td>{{ user.id }}</td>
-            <td>{{ user.shareLink }}</td>
-            <td>{{ user.fileName }}</td>
-            <td>{{ user.fileType }}</td>
-            <td>{{ user.fileSize }}</td>
-            <td>{{ user.linksCount }}</td>
-            <td><button v-on:click="closeConnect(user.id)">关闭</button></td>
-        </tr>
+    <table class="layui-table" >
+        <colgroup>
+            <col width="50">
+            <col width="100">
+            <col width="300">
+            <col width="300">
+            <col width="100">
+            <col width="100">
+            <col width="50">
+            <col width="50">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>序号</th>
+                <th>用户ID</th>
+                <th>用户分享的链接</th>
+                <th>文件名</th>
+                <th>文件类型</th>
+                <th>文件大小</th>
+                <th>连接人数</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr v-for="(user, id, index) in users" v-bind:key="user.id">
+                <td>{{ index + 1 }}</td>
+                <td>{{ user.id }}</td>
+                <td>{{ user.shareLink }}</td>
+                <td>{{ user.fileName }}</td>
+                <td>{{ user.fileType }}</td>
+                <td>{{ user.fileSize }}</td>
+                <td>{{ user.linksCount }}</td>
+                <td><button v-on:click="closeConnect(user.id)" type="button" class="layui-btn">关闭</button></td>
+            </tr>
+        </tbody>
     </table>
 </div>
 
-<script src="js/jquery.min.js"></script>
 <script src="js/vue.js"></script>
 <script src="js/app.js"></script>
+<script src="layui/layui.js"></script>
 <script>
 
     let vue = new Vue({

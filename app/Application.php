@@ -134,6 +134,9 @@ class Application
                     }
 
                     // 把管理员从用户表删除
+                    if ($this->usersTable->exists($frame->fd)) {
+                        $this->usersTable->del($frame->fd);
+                    }
 
                     $users = [];
                     foreach ($this->usersTable as $user) {
