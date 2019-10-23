@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+</head>
+<body>
+
+<table id="userTable">
+    <tr>
+        <th>用户ID</th>
+        <th>用户分享的链接</th>
+    </tr>
+</table>
+<table id="fileTable">
+    <tr>
+        <th>用户ID</th>
+        <th>文件名</th>
+        <th>文件类型</th>
+        <th>文件大小</th>
+        <th>连接人数</th>
+    </tr>
+
+</table>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/app.js"></script>
+<script>
+    let app = new Application();
+
+    app.setOnOpen(function (event) {
+
+        console.log('连接成功');
+        // 请求要基础数据
+        app.ws.send(app.newProtocol(Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA, '请求后台数据').toJson());
+    });
+
+    app.setOnMessage(function (event) {
+
+        let msg = app.newProtocol().parse(event.data);
+        switch (msg.type) {
+
+            case Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA:
+                for (let i in msg.data.users) {
+
+                    let user = msg.data.users[i];
+                    $('#userTable').append(buildUserHtml(user));
+                }
+
+                for (let i in msg.data.files) {
+
+                    let user = msg.data.files[i];
+                    $('#userTable').append(buildFileHtml(user));
+                }
+                break;
+            case Application.MessageTypeEnum.ADMIN_EVENT_ADD_USER:
+                break;
+            case Application.MessageTypeEnum.ADMIN_EVENT_ADD_LINK:
+                break;
+        }
+    });
+
+    app.setOnClose(function (event) {
+
+        alert('连接失败');
+    })
+
+
+    function buildUserHtml(user)
+    {
+        return '<tr><td>'+ user.id +'</td><td>'+ user.shareLink +'</td></tr>'
+    }
+    function buildFileHtml(file)
+    {
+        return '<tr><td>'+ file.userId +'</td><td>'+ file.fileNmae +'</td><td>'+ file.fileTpye +'</td><td>'+ file.fileSize +'</td><td>'+ file.linksCount +'</td></tr>'
+    }
+</script>
+</body>
+</html>

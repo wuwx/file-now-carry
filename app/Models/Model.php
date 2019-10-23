@@ -10,6 +10,10 @@ use Swoole\Table;
 
 class Model
 {
+    /**
+     * @param $attributes
+     * @return static
+     */
     public static function newInstance($attributes)
     {
         $model = new static();
@@ -25,7 +29,7 @@ class Model
         return $model;
     }
 
-    public static function buildTable(Table $table)
+    public static function createTable(Table $table)
     {
         $className = static::class;
         $attributes = get_class_vars($className);
@@ -45,6 +49,7 @@ class Model
             }
         }
 
+        $table->create();
         return $table;
     }
 

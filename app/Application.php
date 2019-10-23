@@ -8,8 +8,10 @@ use App\Contracts\EncrypterContract;
 use App\Enums\MessageTypeEnum;
 use App\Enums\RFC6455;
 use App\Messages\Protocol;
+use App\Models\Admin;
 use App\Models\User;
 use App\Models\UserHasFile;
+use App\Utils\Arr;
 use App\Utils\Str;
 use Swoole\Atomic;
 use Swoole\Http\Request;
@@ -20,8 +22,9 @@ use Swoole\WebSocket\Server;
 
 class Application
 {
-    protected $userTable;
-    protected $fileTable;
+    public $userTable;
+    public $fileTable;
+    public $adminTable;
 
     protected $atomic;
     protected $server;
@@ -37,8 +40,9 @@ class Application
         $this->atomic = new Atomic(0);
 
 
-        $this->userTable = User::buildTable(new Table($max))->create();
-        $this->fileTable = UserHasFile::buildTable(new Table($max))->create();
+        // 创建内存表
+        $this->userTable = User::createTable(new Table($max));
+        $this->fileTable = UserHasFile::createTable(new Table($max));
     }
 
     public function run()
@@ -60,12 +64,11 @@ class Application
 
             if ($count >= $this->max) {
 
-                echo "拒绝";
                 $server->disconnect($request->fd, RFC6455::CLOSE_CODE, Protocol::newInstanceToJson(MessageTypeEnum::CLOSE, "连接数超过了{$this->max}, 拒绝连接"));
                 return;
             }
 
-            echo $request->fd . ' 连接服务器' . PHP_EOL;
+            $this->userTable->set($request->fd, User::newInstance(['id' => $request->fd])->toArray());
         };
     }
 
@@ -73,17 +76,14 @@ class Application
     {
         return function (Server $server, Frame $frame) {
 
-            echo $frame->data . PHP_EOL;
-
             $message = Protocol::parse($frame->data);
             switch ($message->getType()) {
 
                 case MessageTypeEnum::CREATED_ROOM:
 
                     // 如果已经建立过了，那么就回应
-                    if ($this->idTable->exist($frame->fd)) {
+                    if ($this->fileTable->exist($frame->fd)) {
 
-                        echo "已经建立过房间";
                         $server->push($frame->fd, Protocol::newInstanceToJson(MessageTypeEnum::CREATED_ROOM, '你已经创建了房间，请勿重复'));
                         return;
                     }
@@ -91,18 +91,22 @@ class Application
                     // 建立房间
                     // 1. 生成房间链接
                     $uri = Str::random();
-                    $this->idTable->set($frame->fd, compact('uri'));
-                    $values = array_merge(['id' => $frame->fd, 'links_count' => 0], $message->getData());
-                    $this->dataTable->set($uri, $values);
+
+                    $this->userTable->set($frame->fd, User::newInstance(['uri' => $uri])->toArray());
+                    $this->fileTable->set($uri, UserHasFile::newInstance(array_merge(['userId' => $frame->fd], $message->getData()))->toArray());
+                    break;
+
+
+                // 后台的请求
+                case MessageTypeEnum::ADMIN_EVENT_INIT_DATA:
+
+                    $data = [
+                        'users' => Arr::getTableRows($this->userTable),
+                        'files' => Arr::getTableRows($this->fileTable),
+                    ];
+                    $server->push($frame->fd, Protocol::newInstanceToJson(MessageTypeEnum::ADMIN_EVENT_INIT_DATA, 'success', $data));
                     break;
             }
-
-
-            foreach ($this->dataTable as $uri => $row) {
-
-                echo $uri . '   ' . $row['id'] . '  ' . $row['links_count'] .  '  ' . $row['file_name'] .PHP_EOL;
-            }
-
         };
     }
 
@@ -118,12 +122,18 @@ class Application
         return function (Server $server, int $fd, int $reactorId) {
 
             $this->atomic->sub(1);
-            // 清楚数据表
-            $user = $this->idTable->get($fd);
 
-            $this->idTable->del($fd);
-            $this->dataTable->del($user['uri']);
+            // 清除内存表
+            if ($this->userTable->exists($fd)) {
+
+                $user = User::newInstance($this->userTable->get($fd));
+
+                $this->userTable->del($user->getId());
+                if (! is_null($user->getShareLink())) {
+
+                    $this->fileTable->del($user->getShareLink());
+                }
+            }
         };
     }
-
 }

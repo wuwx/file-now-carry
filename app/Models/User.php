@@ -5,7 +5,7 @@ namespace App\Models;
 class User extends Model
 {
     /**
-     * @var integer
+     * @var int
      */
     protected $id;
 
@@ -14,4 +14,22 @@ class User extends Model
      * @length 90
      */
     protected $shareLink;
+
+    /**
+     * @return int
+     */
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    /**
+     * @return string
+     */
+    public function getShareLink(): string
+    {
+        return $this->shareLink;
+    }
+
+
 }

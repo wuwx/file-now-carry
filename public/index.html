@@ -9,53 +9,44 @@
     <input type="file" id="inputFile">
     <button id="linkBtn">生成连接</button>
 
+    <script src="js/jquery.min.js"></script>
+    <script src="js/app.js"></script>
     <script>
 
-
-        let ws = new WebSocket('ws://127.0.0.1:999');
-        ws.onopen = function () {
+        let app = new Application();
+        app.setOnOpen(function () {
 
             console.log('websocket connected');
-            let app = new Application(ws);
+
+            let page = new PageClass();
             let inputFile = document.getElementById('inputFile');
             let linkBtn = document.getElementById('linkBtn');
 
             inputFile.onchange = function () {
                 let selectFile = inputFile.files[0];
-                app.setFile(selectFile);
+                page.setFile(selectFile);
             };
             linkBtn.onclick = function () {
 
 
-                if (! app.file) {
+                if (! page.file) {
 
                     alert('你还没有选择文件');
                     return;
                 }
 
-                console.log(app.file);
-
                 // 开始创建房间
-                app.createRoom();
+                page.createRoom();
             };
 
-            function Application(ws)
+            function PageClass(ws)
             {
                 let that = this;
                 this.chunkSize = 10;
-                this.ws = ws;
                 this.file = null;
 
-                Application.MessageTypeEnum = {
-                    COMMON: 1,
-                    FILE_PRE_UPLOAD: 1,
-                    FILE_UPLOADING: 2,
-                    FILE_UPLOADED: 3,
-                    CREATED_ROOM: 4,
-                    CLOSE: 0
-                };
 
-                this.ws.onmessage = function(event) {
+                this.onmessage = function(event) {
                     // 处理数据
                     let data = event.data;
                     let msg = that.newProtocol().parse(data);
@@ -95,7 +86,7 @@
                         file_type: this.file.type
                     };
 
-                    this.ws.send(this.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
+                    app.ws.send(app.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
                 };
                 this.readChunkContents = function (chunkIndex) {
 
@@ -111,60 +102,13 @@
 
                     return blobSlice.call(this.file, start, end);
                 };
-
-                /**
-                 * 通信协议类
-                 * @param type
-                 * @param msg
-                 * @param data
-                 * @constructor
-                 */
-                this.newProtocol = function (type, msg, data)
-                {
-                    let obj = {
-                        type: type,
-                        msg: msg,
-                        data: data
-                    };
-
-                    obj.parse = function (text) {
-
-                        try {
-
-                            let json = JSON.parse(text);
-                            this.type = json.type;
-                            this.msg = json.msg;
-                            this.data = json.data;
-
-                        } catch (e) {
-
-                            this.type = MessageTypeEnum.COMMON;
-                            this.msg = '';
-                            this.data = {};
-                        }
-
-                        return this;
-                    };
-
-                    obj.toJson = function () {
-
-                        let json = {
-                            type: this.type,
-                            msg: this.msg,
-                            data: this.data
-                        };
-
-                        return JSON.stringify(json);
-                    }
-
-                    return obj;
-                }
             }
-        };
-        ws.onclose = function () {
+        });
+
+        app.setOnClose(function () {
 
             alert('服务器关闭连接');
-        }
+        });
     </script>
 </body>
 </html>
