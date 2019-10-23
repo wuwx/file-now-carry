@@ -2,6 +2,8 @@
 
 namespace App\Utils;
 
+use Swoole\Table;
+
 class Str
 {
 
@@ -26,5 +28,26 @@ class Str
         }
 
         return $str;
+    }
+
+    public static function caseAsSwooleType($type)
+    {
+        switch ($type) {
+
+            case 'int':
+            case 'integer':
+                return Table::TYPE_INT;
+                break;
+            case 'str':
+            case 'string':
+                return Table::TYPE_STRING;
+                break;
+            case 'float':
+            case 'double':
+                return Table::TYPE_FLOAT;
+                break;
+        }
+
+        return Table::TYPE_INT;
     }
 }

@@ -1,7 +1,8 @@
 {
     "require": {
         "php":  ">=7.1.0",
-        "swoole/ide-helper": "^4.4"
+        "swoole/ide-helper": "^4.4",
+        "jan-swiecki/simple-annotations": "^0.3.1"
     },
     "autoload": {
         "psr-4": {

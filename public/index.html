@@ -12,9 +12,10 @@
     <script>
 
 
-        let ws = new WebSocket('ws://127.0.0.1:9999');
+        let ws = new WebSocket('ws://127.0.0.1:999');
         ws.onopen = function () {
 
+            console.log('websocket connected');
             let app = new Application(ws);
             let inputFile = document.getElementById('inputFile');
             let linkBtn = document.getElementById('linkBtn');
@@ -31,6 +32,8 @@
                     alert('你还没有选择文件');
                     return;
                 }
+
+                console.log(app.file);
 
                 // 开始创建房间
                 app.createRoom();
@@ -86,7 +89,13 @@
                 // 创建房间
                 this.createRoom = function () {
 
-                    this.ws.send(this.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间').toJson())
+                    let fileObj = {
+                        file_size: this.file.size,
+                        file_name: this.file.name,
+                        file_type: this.file.type
+                    };
+
+                    this.ws.send(this.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
                 };
                 this.readChunkContents = function (chunkIndex) {
 
@@ -152,6 +161,10 @@
                 }
             }
         };
+        ws.onclose = function () {
+
+            alert('服务器关闭连接');
+        }
     </script>
 </body>
 </html>

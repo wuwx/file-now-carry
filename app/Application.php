@@ -8,8 +8,9 @@ use App\Contracts\EncrypterContract;
 use App\Enums\MessageTypeEnum;
 use App\Enums\RFC6455;
 use App\Messages\Protocol;
+use App\Models\User;
+use App\Models\UserHasFile;
 use App\Utils\Str;
-use MongoDB\BSON\Type;
 use Swoole\Atomic;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -19,37 +20,25 @@ use Swoole\WebSocket\Server;
 
 class Application
 {
-    protected $idTable;
-    protected $dataTable;
+    protected $userTable;
+    protected $fileTable;
 
     protected $atomic;
     protected $server;
 
     protected $max;
 
-    protected $encrypter;
 
-
-    public function __construct(EncrypterContract $encrypter, $max = 100)
+    public function __construct($max = 100, $port = 9999)
     {
-        $this->encrypter = $encrypter;
-        $this->server = new SocketServer();
+        $this->server = new SocketServer('0.0.0.0', $port);
 
         $this->max = $max;
         $this->atomic = new Atomic(0);
 
 
-        $this->idTable = new Table($max);
-        $this->dataTable = new Table($max);
-
-        $this->idTable->column('uri', Table::TYPE_STRING, 32);
-
-        // 反向索引id， 连接人数
-        $this->dataTable->column('id', Table::TYPE_INT);
-        $this->dataTable->column('links_count', Table::TYPE_INT);
-
-        $this->idTable->create();
-        $this->dataTable->create();
+        $this->userTable = User::buildTable(new Table($max))->create();
+        $this->fileTable = UserHasFile::buildTable(new Table($max))->create();
     }
 
     public function run()
@@ -71,6 +60,7 @@ class Application
 
             if ($count >= $this->max) {
 
+                echo "拒绝";
                 $server->disconnect($request->fd, RFC6455::CLOSE_CODE, Protocol::newInstanceToJson(MessageTypeEnum::CLOSE, "连接数超过了{$this->max}, 拒绝连接"));
                 return;
             }
@@ -102,16 +92,15 @@ class Application
                     // 1. 生成房间链接
                     $uri = Str::random();
                     $this->idTable->set($frame->fd, compact('uri'));
-                    $this->dataTable->set($uri, ['id' => $frame->fd, 'links_count' => 0]);
+                    $values = array_merge(['id' => $frame->fd, 'links_count' => 0], $message->getData());
+                    $this->dataTable->set($uri, $values);
                     break;
             }
-
-            shell_exec("clear");
 
 
             foreach ($this->dataTable as $uri => $row) {
 
-                echo $uri . '   ' . $row['id'] . '  ' . $row['links_count'] . PHP_EOL;
+                echo $uri . '   ' . $row['id'] . '  ' . $row['links_count'] .  '  ' . $row['file_name'] .PHP_EOL;
             }
 
         };
@@ -130,7 +119,10 @@ class Application
 
             $this->atomic->sub(1);
             // 清楚数据表
-            $this->table->del($this->encrypter->decrypt($fd));
+            $user = $this->idTable->get($fd);
+
+            $this->idTable->del($fd);
+            $this->dataTable->del($user['uri']);
         };
     }
 

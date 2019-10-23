@@ -24,7 +24,15 @@ class Protocol
         $m = new self();
         $m->type = intval($object->type ?? MessageTypeEnum::COMMON);
         $m->msg = strval($object->msg ?? '');
-        $m->data = intval($object->data ?? []);
+
+        if (! isset($object->data)) {
+            $m->data = [];
+        } elseif (is_object($object->data)) {
+            $m->data = (array)$object->data;
+        } else {
+            $m->data = $object->data;
+        }
+
         return $m;
     }
 
