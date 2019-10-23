@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin</title>
+    <link rel="stylesheet" href="css/toastr.min.css">
     <link rel="stylesheet" href="layui/css/layui.css">
 </head>
 <body>
@@ -48,8 +49,10 @@
     </table>
 </div>
 
+<script src="js/jquery.min.js"></script>
 <script src="js/vue.js"></script>
 <script src="js/app.js"></script>
+<script src="js/toastr.min.js"></script>
 <script src="layui/layui.js"></script>
 <script>
 
@@ -85,7 +88,7 @@
             let that = this;
             that.app.setOnOpen(function (event) {
 
-                console.log('连接成功');
+                toastr.success('连接服务器成功')
                 // 请求要基础数据
                 that.app.ws.send(that.app.newProtocol(Application.MessageTypeEnum.ADMIN_EVENT_INIT_DATA, '请求后台数据').toJson());
             });
@@ -105,9 +108,17 @@
                         }
                         break;
                     case Application.MessageTypeEnum.ADMIN_USER_ONLINE:
+
+                        let user = that.formatObjectKey(msg.data);
+                        toastr.success(user.id + '加入了连接');
+
+                        vue.$set(vue.users, user.id, user);
+                        break;
                     case Application.MessageTypeEnum.CREATED_ROOM:
 
                         let object = that.formatObjectKey(msg.data);
+                        toastr.info(object.id + '创建了文件');
+
                         vue.$set(vue.users, object.id, object);
                         break;
                     case Application.MessageTypeEnum.ADMIN_USER_OFFLINE:
@@ -115,6 +126,7 @@
                         let fd = msg.data.fd;
                         console.error(fd);
                         if (fd) {
+                            toastr.error(fd + '用户下线');
                             vue.$delete(vue.users, fd);
                         }
                         break;

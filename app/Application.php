@@ -4,14 +4,12 @@
 namespace App;
 
 
-use App\Contracts\EncrypterContract;
 use App\Enums\MessageTypeEnum;
 use App\Enums\RFC6455;
 use App\Messages\Protocol;
 use App\Models\Admin;
 use App\Models\User;
 use App\Models\UserHasFile;
-use App\Utils\Arr;
 use App\Utils\Str;
 use Swoole\Atomic;
 use Swoole\Http\Request;
@@ -32,14 +30,19 @@ class Application
     protected $max;
     protected $adminMaxCount = 9;
 
+    protected $port;
+    protected $publicDomain;
 
-    public function __construct($max = 100, $port = 9999)
+
+    public function __construct($max = 100, $port = 9999, $publicDomain = '127.0.0.1')
     {
-        $this->server = new SocketServer('0.0.0.0', $port);
-
+        $this->port = $port;
+        $this->publicDomain = $publicDomain;
         $this->max = $max;
-        $this->atomic = new Atomic(0);
 
+        $this->server = new SocketServer('0.0.0.0', $this->port);
+
+        $this->atomic = new Atomic(0);
 
         // 创建内存表
         $this->usersTable = User::createTable(new Table($max));
@@ -98,13 +101,16 @@ class Application
 
                     // 建立房间
                     // 1. 生成房间链接
-                    $uri = Str::random();
+                    $shareLink = Str::random();
 
-                    $user = User::newInstance(['id' => $frame->fd, 'shareLink' => $uri])->toArray();
+                    $user = User::newInstance(['id' => $frame->fd, 'shareLink' => $shareLink])->toArray();
                     $file = UserHasFile::newInstance(array_merge(['userId' => $frame->fd], $message->getData()))->toArray();
 
                     $this->usersTable->set($frame->fd, $user);
-                    $this->filesTable->set($uri, $file);
+                    $this->filesTable->set($shareLink, $file);
+
+                    // 告诉前台生成的连接
+                    $server->push($frame->fd, Protocol::newInstanceToJson(MessageTypeEnum::CREATED_ROOM, '', compact('shareLink')));
 
                     // 推送给后台用户上线
                     $user['file'] = $file;
@@ -160,6 +166,9 @@ class Application
     {
         return function (Request $request, Response $response) {
 
+            $file = trim($request->server['request_uri'], '/');
+
+            $response->end('hello');
         };
     }
 

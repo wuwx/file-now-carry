@@ -3,82 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <title>文件直传</title>
+    <link rel="stylesheet" href="css/toastr.min.css">
 </head>
 <body>
 
-    <input type="file" id="inputFile">
-    <button id="linkBtn">生成连接</button>
+    <div id="container">
+        <input type="file" v-on:change="selectFile">
+        <button id="linkBtn" v-on:click="createLink">生成连接</button>
+        <span><a target="_blank" v-if="shareLink" v-bind:href="shareLink">{{ shareLink }}</a></span>
+    </div>
 
     <script src="js/jquery.min.js"></script>
+    <script src="js/vue.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/toastr.min.js"></script>
+    <script src="layui/layui.js"></script>
     <script>
 
-        let app = new Application();
-        app.setOnOpen(function () {
+        let vue = new Vue({
+            el: '#container',
+            data: {
+                file: null,
+                app: new Application(),
+                shareLink: null,
+            },
+            methods: {
 
-            console.log('websocket connected');
+                selectFile: function (e) {
 
-            let page = new PageClass();
-            let inputFile = document.getElementById('inputFile');
-            let linkBtn = document.getElementById('linkBtn');
+                    this.file = e.target.files[0];
+                },
+                createLink: function () {
 
-            inputFile.onchange = function () {
-                let selectFile = inputFile.files[0];
-                page.setFile(selectFile);
-            };
-            linkBtn.onclick = function () {
+                    if (! this.file) {
 
-
-                if (! page.file) {
-
-                    alert('你还没有选择文件');
-                    return;
-                }
-
-                // 开始创建房间
-                page.createRoom();
-            };
-
-            function PageClass(ws)
-            {
-                let that = this;
-                this.chunkSize = 10;
-                this.file = null;
-
-
-                this.onmessage = function(event) {
-                    // 处理数据
-                    let data = event.data;
-                    let msg = that.newProtocol().parse(data);
-
-                    switch (msg.type) {
-
-                        case Application.FILE_PRE_UPLOAD:
-                            // 上传之前，把文件大小，切片端告诉后端
-                            that.ws.send(that.newProtocol(Application.MessageTypeEnum.FILE_PRE_UPLOAD, '传输文件信息', that.file).toJson());
-                            break;
-                        case Application.FILE_UPLOADING:
-
-                            // 让后端告诉我要取第几块的数据，前端只负责读取
-                            let Blob = that.readChunkContents(msg.data.index);
-                            that.ws.send(Blob);
-                            break;
-                        case Application.FILE_UPLOADED:
-                            // 传输完成，代表对方接受完成
-                            break;
-
+                        alert('你还没有选择文件');
+                        return;
                     }
 
-                };
-
-                this.setFile = function (file) {
-                    this.file = file;
-
-                    return this;
-                };
-
-                // 创建房间
-                this.createRoom = function () {
+                    // 开始创建房间
+                    this.createRoom();
+                }
+                ,
+                createRoom: function () {
 
                     let fileObj = {
                         fileSize: this.file.size,
@@ -87,9 +54,9 @@
                     };
 
                     console.log(fileObj);
-                    app.ws.send(app.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
-                };
-                this.readChunkContents = function (chunkIndex) {
+                    this.app.ws.send(this.app.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
+                },
+                readChunkContents: function (chunkIndex) {
 
                     if (! this.file) {
 
@@ -102,15 +69,48 @@
                     let end = start + this.chunkSize;
 
                     return blobSlice.call(this.file, start, end);
-                };
+                }
+            },
+            mounted: function () {
+
+                let that = this;
+                console.log(that.app);
+                that.app.setOnOpen(function () {
+
+                    console.log('websocket connected');
+                });
+
+
+                that.app.setOnMessage(function(event) {
+                    // 处理数据
+                    let data = event.data;
+                    let msg = that.app.newProtocol().parse(data);
+
+                    console.log(msg);
+                    switch (msg.type) {
+
+                        case Application.MessageTypeEnum.CREATED_ROOM:
+                            // 上传之前，把文件大小，切片端告诉后端
+                            let url = window.location.href.split('/').slice(0,-1).join('/');
+
+                            that.shareLink = url + '/client.html?link=' + msg.data.shareLink;
+                            toastr.success('创建连接成功，拿去分享吧');
+                            break;
+                        case Application.FILE_UPLOADED:
+                            // 传输完成，代表对方接受完成
+                            break;
+
+                    }
+
+                });
+
+                that.app.setOnClose(function (e) {
+
+                    let msg = that.app.newProtocol().parse(e.reason);
+
+                    alert(msg.msg || '服务器关闭了连接');
+                });
             }
-        });
-
-        app.setOnClose(function (e) {
-
-            let msg = app.newProtocol().parse(e.reason);
-
-            alert(msg.msg || '服务器关闭了连接');
         });
     </script>
 </body>

@@ -17,7 +17,7 @@ class UserHasFile extends Model
 
     /**
      * @var string
-     * @length 50
+     * @length 100
      */
     protected $fileType;
 

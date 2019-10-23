@@ -4,7 +4,6 @@ function Application()
 
     Application.MessageTypeEnum = {
         COMMON: 1,
-        FILE_PRE_UPLOAD: 1,
         FILE_UPLOADING: 2,
         FILE_UPLOADED: 3,
         CREATED_ROOM: 4,
