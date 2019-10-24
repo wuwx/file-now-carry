@@ -35,6 +35,9 @@
             <legend>分享连接</legend>
             <div class="layui-field-box">
                 <a target="_blank"  v-bind:href="shareLink">{{ shareLink }}</a>
+                <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="bar">
+                    <div class="layui-progress-bar layui-bg-green" lay-percent="0%" ></div>
+                </div>
             </div>
         </fieldset>
     </div>
@@ -53,6 +56,9 @@
                 app: new Application(),
                 shareLink: null,
                 linkUserId: null,
+
+                uploadSize: 0,
+                progressBar: null,
 
                 fileName: '',
             },
@@ -103,12 +109,26 @@
                     let that = this;
                     reader.onload = function () {
 
-                        console.log(this.result);
+                        that.uploadSize += this.result.length;
+                        let rate = Math.ceil((that.uploadSize / that.file.size) * 100);
+                        that.progressBar.progress('bar', rate + '%');
+
+
                         that.app.ws.send(that.app.newProtocol(Application.MessageTypeEnum.PUT_FILE_DATA, '', {index: chunkIndex, content: this.result}).toJson())
                     };
 
                     reader.readAsBinaryString(blobSlice.call(this.file, start, end));
                 }
+            },
+            created: function () {
+
+                let that = this;
+
+                //注意进度条依赖 element 模块，否则无法进行正常渲染和功能性操作
+                layui.use('element', function(){
+
+                    that.progressBar = layui.element;
+                });
             },
             mounted: function () {
 

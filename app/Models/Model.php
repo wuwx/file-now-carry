@@ -18,7 +18,7 @@ class Model
     {
         $model = new static();
 
-        foreach ($attributes as $key => $val) {
+        foreach ($attributes ?? [] as $key => $val) {
 
             if (property_exists($model, $key)) {
 
