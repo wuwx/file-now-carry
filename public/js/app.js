@@ -4,15 +4,15 @@ function Application()
 
     Application.MessageTypeEnum = {
         COMMON: 1,
-        FILE_UPLOADING: 2,
-        FILE_UPLOADED: 3,
+        GET_FILE_INFO: 2,
+        GET_FILE_DATA: 3,
         CREATED_ROOM: 4,
-        CLOSE: 0,
 
+        PUT_FILE_DATA: 5,
 
         ADMIN_EVENT_INIT_DATA: 999,
         ADMIN_CLOSE_CONNECT: 1000,
-        ADMIN_EVENT_ADD_LINK: 1001,
+        ADMIN_USER_UPDATED: 1001,
         ADMIN_USER_ONLINE: 1002,
         ADMIN_USER_OFFLINE: 1003,
     };
@@ -55,7 +55,7 @@ function Application()
 
             } catch (e) {
 
-                this.type = MessageTypeEnum.COMMON;
+                this.type = Application.MessageTypeEnum.COMMON;
                 this.msg = '';
                 this.data = {};
             }

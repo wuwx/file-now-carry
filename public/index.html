@@ -4,13 +4,39 @@
     <meta charset="UTF-8">
     <title>文件直传</title>
     <link rel="stylesheet" href="css/toastr.min.css">
+    <link rel="stylesheet" href="layui/css/layui.css">
 </head>
 <body>
 
     <div id="container">
-        <input type="file" v-on:change="selectFile">
-        <button id="linkBtn" v-on:click="createLink">生成连接</button>
-        <span><a target="_blank" v-if="shareLink" v-bind:href="shareLink">{{ shareLink }}</a></span>
+        <blockquote class="layui-elem-quote layui-quote-nm">FileNowCarry Index</blockquote>
+        <fieldset class="layui-elem-field">
+            <legend>连接人</legend>
+            <div class="layui-field-box">
+                <h5>{{ linkUserId }}</h5>
+            </div>
+        </fieldset>
+
+
+        <fieldset class="layui-elem-field">
+            <legend>{{ fileName }}</legend>
+            <div class="layui-field-box">
+                <input type="file" v-on:change="selectFile" id="selectFile" style="visibility: hidden">
+                <label type="button" class="layui-btn" for="selectFile">
+                    <i class="layui-icon">&#xe608;</i> 选择文件
+                </label>
+
+                <button id="linkBtn" v-on:click="createLink" class="layui-btn layui-btn-normal">生成连接</button>
+            </div>
+        </fieldset>
+
+
+        <fieldset v-if="shareLink" class="layui-elem-field">
+            <legend>分享连接</legend>
+            <div class="layui-field-box">
+                <a target="_blank"  v-bind:href="shareLink">{{ shareLink }}</a>
+            </div>
+        </fieldset>
     </div>
 
     <script src="js/jquery.min.js"></script>
@@ -26,12 +52,16 @@
                 file: null,
                 app: new Application(),
                 shareLink: null,
+                linkUserId: null,
+
+                fileName: '',
             },
             methods: {
 
                 selectFile: function (e) {
 
                     this.file = e.target.files[0];
+                    this.fileName = this.file.name;
                 },
                 createLink: function () {
 
@@ -56,7 +86,7 @@
                     console.log(fileObj);
                     this.app.ws.send(this.app.newProtocol(Application.MessageTypeEnum.CREATED_ROOM, '创建房间', fileObj).toJson())
                 },
-                readChunkContents: function (chunkIndex) {
+                readChunkContents: function (chunkIndex, chunkSize) {
 
                     if (! this.file) {
 
@@ -65,10 +95,19 @@
                     }
 
                     let blobSlice = File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice;
-                    let start = chunkIndex * this.chunkSize;
-                    let end = start + this.chunkSize;
+                    let start = chunkIndex * chunkSize;
+                    let end = start + chunkSize;
 
-                    return blobSlice.call(this.file, start, end);
+                    let reader = new FileReader();
+
+                    let that = this;
+                    reader.onload = function () {
+
+                        console.log(this.result);
+                        that.app.ws.send(that.app.newProtocol(Application.MessageTypeEnum.PUT_FILE_DATA, '', {index: chunkIndex, content: this.result}).toJson())
+                    };
+
+                    reader.readAsBinaryString(blobSlice.call(this.file, start, end));
                 }
             },
             mounted: function () {
@@ -96,8 +135,19 @@
                             that.shareLink = url + '/client.html?link=' + msg.data.shareLink;
                             toastr.success('创建连接成功，拿去分享吧');
                             break;
-                        case Application.FILE_UPLOADED:
-                            // 传输完成，代表对方接受完成
+                        case Application.MessageTypeEnum.GET_FILE_INFO:
+
+                            that.linkUserId = msg.data.linkUserId;
+
+                            toastr.success(that.linkUserId + ' 连接了此文件');
+                            break;
+                        case Application.MessageTypeEnum.GET_FILE_DATA:
+                            // 获取文件信息
+                            let index = msg.data.index || 0;
+                            let size = msg.data.size || 1024;
+
+                            // 去读取文件
+                            that.readChunkContents(index, size);
                             break;
 
                     }

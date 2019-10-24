@@ -11,6 +11,12 @@ class UserHasFile extends Model
 
     /**
      * @var string
+     * @length 32
+     */
+    protected $shareLink;
+
+    /**
+     * @var string
      * @length 100
      */
     protected $fileName;
@@ -29,7 +35,7 @@ class UserHasFile extends Model
     /**
      * @var int
      */
-    protected $linksCount = 0;
+    protected $linkUserId;
 
     /**
      * @return int
@@ -66,8 +72,17 @@ class UserHasFile extends Model
     /**
      * @return int
      */
-    public function getLinksCount(): int
+    public function getLinkUserId(): int
     {
-        return $this->linksCount;
+        return $this->linkUserId;
     }
+
+    /**
+     * @return string
+     */
+    public function getShareLink(): string
+    {
+        return $this->shareLink;
+    }
+
 }

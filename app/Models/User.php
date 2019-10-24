@@ -12,8 +12,14 @@ class User extends Model
 
     /**
      * @var string
+     * @length 32
      */
     protected $shareLink;
+
+    /**
+     * @var int
+     */
+    protected $isShare = 1;
 
     /**
      * @return int
@@ -21,6 +27,11 @@ class User extends Model
     public function getId(): int
     {
         return $this->id;
+    }
+
+    public function getIsShare(): int
+    {
+        return $this->isShare;
     }
 
     /**

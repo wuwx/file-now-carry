@@ -14,7 +14,7 @@ class Model
      * @param $attributes
      * @return static
      */
-    public static function newInstance($attributes)
+    public static function newInstance($attributes = [])
     {
         $model = new static();
 

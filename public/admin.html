@@ -25,11 +25,12 @@
             <tr>
                 <th>序号</th>
                 <th>用户ID</th>
-                <th>用户分享的链接</th>
+                <th>分享连接</th>
                 <th>文件名</th>
                 <th>文件类型</th>
                 <th>文件大小</th>
-                <th>连接人数</th>
+                <th>连接用户</th>
+                <th>是否是分享者</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -42,7 +43,8 @@
                 <td>{{ user.fileName }}</td>
                 <td>{{ user.fileType }}</td>
                 <td>{{ user.fileSize }}</td>
-                <td>{{ user.linksCount }}</td>
+                <td>{{ user.linkUserId }}</td>
+                <td>{{ user.isShare ? '是' : '否' }}</td>
                 <td><button v-on:click="closeConnect(user.id)" type="button" class="layui-btn">关闭</button></td>
             </tr>
         </tbody>
@@ -75,7 +77,8 @@
                     fileName: file.fileName,
                     fileSize: file.fileSize,
                     fileType: file.fileType,
-                    linksCount: file.linksCount
+                    linkUserId: file.linkUserId,
+                    isShare: u.isShare
                 };
             },
             closeConnect: function (id) {
@@ -110,9 +113,16 @@
                     case Application.MessageTypeEnum.ADMIN_USER_ONLINE:
 
                         let user = that.formatObjectKey(msg.data);
-                        toastr.success(user.id + '加入了连接');
+                        toastr.success(user.id + '创建了连接');
 
                         vue.$set(vue.users, user.id, user);
+                        break;
+                    case Application.MessageTypeEnum.ADMIN_USER_UPDATED:
+
+                        let u = that.formatObjectKey(msg.data);
+                        toastr.success(u.id + '加入了连接');
+
+                        vue.$set(vue.users, u.id, u);
                         break;
                     case Application.MessageTypeEnum.CREATED_ROOM:
 
